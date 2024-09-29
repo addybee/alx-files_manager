@@ -1,4 +1,4 @@
-const MongoClient = require('mongodb').MongoClient;
+const { MongoClient } = require('mongodb').MongoClient;
 
 class DBClient {
   constructor() {
@@ -25,7 +25,7 @@ class DBClient {
 
   async nbUsers() {
     const users = this.db.collection('users');
-    const res = await users.find({}).toArray()
+    const res = await users.find({}).toArray();
     return res.length;
   }
 
@@ -34,7 +34,7 @@ class DBClient {
     const res = await files.find({}).toArray();
     return res.length;
   }
-};
+}
 
 const dbclient = new DBClient();
 

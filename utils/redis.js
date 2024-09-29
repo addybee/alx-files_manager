@@ -3,11 +3,10 @@ import util from 'util';
 
 /**
  * Class representing a Redis client.
- * 
+ *
  * @constructor
  */
 class RedisClient {
-
   constructor() {
     this.client = createClient();
     this.alive = true;
@@ -36,10 +35,9 @@ class RedisClient {
     return this.alive;
   }
 
-
   /**
    * Asynchronously retrieves the value stored in Redis corresponding to the provided key.
-   * 
+   *
    * @param {string} key - The key to look up in the Redis database.
    * @returns {Promise<any>} - A promise that resolves with the value associated with the key.
    */
@@ -48,13 +46,13 @@ class RedisClient {
       return await this.getAsync(key);
     } catch (err) {
       console.error(`Error getting key "${key}":`, err);
-      return null;  // Return null if key retrieval fails
+      return null; // Return null if key retrieval fails
     }
   }
 
   /**
    * Asynchronously sets a key-value pair in the Redis database with an expiration time.
-   * 
+   *
    * @param {string} key - The key under which the value will be stored.
    * @param {any} value - The value to be stored in Redis.
    * @param {number} duration - The expiration time for the key-value pair in seconds.
@@ -69,7 +67,7 @@ class RedisClient {
 
   /**
    * Asynchronously deletes a key from the Redis database.
-   * 
+   *
    * @param {string} key - The key to be deleted from the Redis database.
    */
   async del(key) {
@@ -79,7 +77,7 @@ class RedisClient {
       console.error(`Error deleting key "${key}":`, err);
     }
   }
-};
+}
 
 const redisClient = new RedisClient();
 
