@@ -4,6 +4,7 @@ import router from './routes/index';
 const port = process.env.PORT || 5000;
 const app = expess();
 
+app.use(expess.json());
 app.use(router);
 
 app.listen(port);

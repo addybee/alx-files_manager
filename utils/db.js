@@ -25,14 +25,24 @@ class DBClient {
 
   async nbUsers() {
     const users = this.db.collection('users');
-    const res = await users.find({}).toArray();
-    return res.length;
+    return users.count();
   }
 
   async nbFiles() {
     const files = this.db.collection('files');
-    const res = await files.find({}).toArray();
-    return res.length;
+    return files.count();
+  }
+
+  async getUserByFilter(filterObject) {
+    const users = this.db.collection('users');
+    const user = await users.findOne(filterObject);
+    return user;
+  }
+
+  async createUser(user) {
+    const users = this.db.collection('users');
+    const { insertedId } = await users.insertOne(user);
+    return insertedId;
   }
 }
 
