@@ -7,5 +7,9 @@ const router = Router();
 router.get('/status', AppController.getStatus);
 router.get('/stats', AppController.getStats);
 router.post('/users', UsersController.postNew);
+// GET /connect => AuthController.getConnect
+router.get('/connect', )
+// GET /disconnect => AuthController.getDisconnect
+// GET /users/me => UserController.getMe
 
 export default router;
