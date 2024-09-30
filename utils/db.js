@@ -25,12 +25,14 @@ class DBClient {
 
   async nbUsers() {
     const users = this.db.collection('users');
-    return users.countDocuments();
+    const res = await users.find({}).toArray();
+    return res.length;
   }
 
   async nbFiles() {
     const files = this.db.collection('files');
-    return files.countDocuments();
+    const res = await files.find({}).toArray();
+    return res.length;
   }
 
   async getUserByFilter(filterObject) {
