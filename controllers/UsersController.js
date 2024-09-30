@@ -41,8 +41,8 @@ class UsersController {
     }
 
     const email = await redisClient.get(`me_${userSession}`);
-    const { _id } = await dbclient.getUserByFilter({ email })
-    return res.json({id: _id, email});
+    const { _id } = await dbclient.getUserByFilter({ email });
+    return res.json({ id: _id, email });
   }
 }
 
