@@ -1,6 +1,6 @@
 import MongoClient from 'mongodb';
 
-class DBClient {
+export class DBClient {
   constructor() {
     const host = process.env.DB_HOST || 'localhost';
     const port = process.env.DB_PORT || 27017;
@@ -45,6 +45,27 @@ class DBClient {
     const users = this.db.collection('users');
     const { insertedId } = await users.insertOne(user);
     return insertedId;
+  }
+
+  async getFileByFilter(filterObject) {
+    try {
+      const files = this.db.collection('files');
+      const fileList = await files.find(filterObject).toArray();
+      return fileList;
+    } catch (error) {
+      console.error(error);
+      return null;
+    }
+  }
+
+  async createFile(file) {
+    try {
+      const files = this.db.collection('files');
+      const { insertedId } = await files.insertOne(file);
+      return insertedId;
+    } catch (error) {
+      return null;
+    }
   }
 }
 

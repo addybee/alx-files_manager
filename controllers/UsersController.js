@@ -1,6 +1,6 @@
 import sha1 from 'sha1';
 import dbclient from '../utils/db';
-import redisClient from '../utils/redis';
+import BasicAuth from '../utils/basicAuth';
 
 class UsersController {
   static async postNew(req, res) {
@@ -35,13 +35,9 @@ class UsersController {
     const xToken = req.get('X-Token');
     if (!xToken) return res.status(401).json({ error: 'Unauthorized' });
 
-    const userSession = await redisClient.get(`auth_${xToken}`);
-    if (!userSession) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const email = await redisClient.get(`me_${userSession}`);
-    const { _id } = await dbclient.getUserByFilter({ email });
+    const user = await BasicAuth.currentUser(xToken);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+    const { _id, email } = user;
     return res.json({ id: _id, email });
   }
 }

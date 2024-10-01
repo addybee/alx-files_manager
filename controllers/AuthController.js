@@ -1,46 +1,29 @@
 // Inside controllers, add a file AuthController.js that contains new endpoints:
-import { v4 as uuidv4 } from 'uuid';
-import sha1 from 'sha1';
-import dbClient from '../utils/db';
 import redisClient from '../utils/redis';
+import BasicAuth from '../utils/basicAuth';
 
 class AuthController {
   // GET /connect should sign-in the user by generating a new authentication token:
   static async getConnect(req, res) {
-    const authorizationHeader = req.get('Authorization');
+    const authorizationHeader = BasicAuth.extractBase64AuthorizationHeader(req);
 
     if (!authorizationHeader) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    if (!authorizationHeader.startsWith('Basic ')) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
     // Decode base64 encoded token
-    const decodedToken = Buffer.from(authorizationHeader.slice(6), 'base64').toString('utf-8');
-    if (!decodedToken.includes(':')) {
+    const [email, password] = BasicAuth.decodeAndExtractCredential(authorizationHeader);
+    if (!email || !password) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
-
-    const [email, password] = decodedToken.split(':'); // Split into email and password
-
     // Check if user exists
-    const user = await dbClient.getUserByFilter({ email });
+    const user = await BasicAuth.userObjectFromCredentials(email, password);
     if (!user) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
-
-    // Optionally verify the password (this assumes you store hashed passwords in your DB)
-    if (user.password !== sha1(password)) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
+    const token = await BasicAuth.createSession(authorizationHeader);
     // Generate a unique session token and store it in Redis with a TTL of 3600 seconds
-    const sessionToken = uuidv4();
-    await redisClient.set(`auth_${sessionToken}`, sessionToken, 3600); // Store the token with a TTL of 3600 seconds
-    await redisClient.set(`me_${sessionToken}`, user.email, 3600);
-    return res.json({ token: sessionToken }); // Return the generated token
+    return res.json({ token }); // Return the generated token
   }
 
   static async getDisconnect(req, res) {

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import AppController from '../controllers/AppController';
 import AuthController from '../controllers/AuthController';
+import FilesController from '../controllers/FilesController';
 import UsersController from '../controllers/UsersController';
 
 const router = Router();
@@ -15,6 +16,6 @@ router.get('/disconnect', AuthController.getDisconnect);
 // GET /users/me => UserController.getMe
 router.get('/users/me', UsersController.getMe);
 // POST /files => FilesController.postUpload
-router.post('/files');
+router.post('/files', FilesController.postUpload);
 
 export default router;
