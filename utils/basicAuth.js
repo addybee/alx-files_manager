@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import sha1 from 'sha1';
-import dbClient from './db';
 import redisClient from './redis';
+import userUtils from './users';
 
 class BasicAuth {
   static extractBase64AuthorizationHeader(req) {
@@ -39,18 +39,17 @@ class BasicAuth {
     if (!email || !password) {
       return null;
     }
-
     // Check if user exists
-    const user = await dbClient.getUserByFilter({ email });
-    if (!user) {
+    const user = await userUtils.getUserByFilter({ email });
+    if (!user || !user.length) {
       return null;
     }
 
     // verify the password
-    if (user.password !== sha1(password)) {
+    if (user[0].password !== sha1(password)) {
       return null;
     }
-    return user;
+    return user[0];
   }
 
   static async createSession(authorizationHeader) {

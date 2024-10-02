@@ -7,4 +7,6 @@ const app = express();
 app.use(express.json({ limit: '5mb' }));
 app.use(router);
 
-app.listen(port);
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});

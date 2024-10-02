@@ -6,7 +6,6 @@ class AuthController {
   // GET /connect should sign-in the user by generating a new authentication token:
   static async getConnect(req, res) {
     const authorizationHeader = BasicAuth.extractBase64AuthorizationHeader(req);
-
     if (!authorizationHeader) {
       return res.status(401).json({ error: 'Unauthorized' });
     }

@@ -4,7 +4,7 @@ import fs from 'fs';
 import { promisify } from 'util';
 import { v4 as uuidv4 } from 'uuid';
 import BasicAuth from '../utils/basicAuth';
-import dbclient from '../utils/db';
+import fileUtil from '../utils/files';
 
 const mkdir = promisify(fs.mkdir).bind(fs);
 const writeFile = promisify(fs.writeFile).bind(fs);
@@ -40,8 +40,8 @@ class FilesController {
 
     // Validate the parentId if provided
     if (parentId) {
-      const parentFiles = await dbclient.getFileByFilter({ parentId });
-      console.log(parentFiles);
+      const parentFiles = await fileUtil.getFileByFilter({ parentId });
+
       if (!parentFiles || !parentFiles.length) return res.status(400).json({ error: 'Parent not found' });
       const file = parentFiles.every((val) => val.type !== 'folder');
       if (!file) return res.status(400).json({ error: 'Parent is not a folder' });
@@ -56,16 +56,17 @@ class FilesController {
       parentId: parentId || '0',
     };
 
-    // Handle folder creation
-    if (type === 'folder') {
-      await dbclient.createFile(doc);
-      const { localPath, _id, ...rest } = doc;
-      return res.status(201).json({ id: _id, ...rest });
-    }
-
-    // Handle file or image creation
-    const folderPath = process.env.FOLDER_PATH || '/tmp/files_manager';
     try {
+      // Handle folder creation
+      if (type === 'folder') {
+        await fileUtil.createFile(doc);
+        const { localPath, _id, ...rest } = doc;
+        return res.status(201).json({ id: _id, ...rest });
+      }
+
+      // Handle file or image creation
+      const folderPath = process.env.FOLDER_PATH || '/tmp/files_manager';
+
       // Ensure the folder exists
       await mkdir(folderPath, { recursive: true });
 
@@ -83,7 +84,7 @@ class FilesController {
       doc.localPath = filePath;
 
       // Create the file document in the database
-      await dbclient.createFile(doc);
+      await fileUtil.createFile(doc);
       const { localPath, _id, ...rest } = doc;
       return res.status(201).json({ id: _id, ...rest });
     } catch (err) {

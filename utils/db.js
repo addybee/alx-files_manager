@@ -1,6 +1,6 @@
-import MongoClient from 'mongodb';
+import { MongoClient } from 'mongodb';
 
-export class DBClient {
+class DBClient {
   constructor() {
     const host = process.env.DB_HOST || 'localhost';
     const port = process.env.DB_PORT || 27017;
@@ -8,15 +8,21 @@ export class DBClient {
     const url = `mongodb://${host}:${port}`;
 
     this.alive = false;
-    MongoClient.connect(url, (err, client) => {
-      if (err) {
-        this.alive = false;
-      } else {
-        this.db = client.db(dbname);
-        this.alive = true;
-        this.client = client;
-      }
-    });
+
+    // Make the connection asynchronous by returning a promise
+    this.connect(url, dbname);
+  }
+
+  async connect(url, dbname) {
+    try {
+      const client = await MongoClient.connect(url, { useUnifiedTopology: true });
+      this.db = client.db(dbname);
+      this.alive = true;
+      this.client = client;
+    } catch (err) {
+      console.error('Failed to connect to MongoDB:', err);
+      this.alive = false;
+    }
   }
 
   isAlive() {
@@ -34,41 +40,7 @@ export class DBClient {
     const res = await files.find({}).toArray();
     return res.length;
   }
-
-  async getUserByFilter(filterObject) {
-    const users = this.db.collection('users');
-    const user = await users.findOne(filterObject);
-    return user;
-  }
-
-  async createUser(user) {
-    const users = this.db.collection('users');
-    const { insertedId } = await users.insertOne(user);
-    return insertedId;
-  }
-
-  async getFileByFilter(filterObject) {
-    try {
-      const files = this.db.collection('files');
-      const fileList = await files.find(filterObject).toArray();
-      return fileList;
-    } catch (error) {
-      console.error(error);
-      return null;
-    }
-  }
-
-  async createFile(file) {
-    try {
-      const files = this.db.collection('files');
-      const { insertedId } = await files.insertOne(file);
-      return insertedId;
-    } catch (error) {
-      return null;
-    }
-  }
 }
 
-const dbclient = new DBClient();
-
-export default dbclient;
+const dbClient = new DBClient();
+export default dbClient;
