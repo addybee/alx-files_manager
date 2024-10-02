@@ -34,14 +34,15 @@ class FilesController {
 
     try {
       // Validate the parentId if provided
-      if (!parentId) {
+      if (parentId) {
         const parentFiles = await fileUtil.getFileByFilter({
-          parentId: parentId !== '0' ? new ObjectId(parentId) : '0',
+          parentId: (parentId && parentId !== '0') ? new ObjectId(parentId) : '0',
         });
 
         if (!parentFiles || !parentFiles.length) return res.status(400).json({ error: 'Parent not found' });
+
         const file = parentFiles.every((val) => val.type !== 'folder');
-        if (!file) return res.status(400).json({ error: 'Parent is not a folder' });
+        if (file) return res.status(400).json({ error: 'Parent is not a folder' });
       }
 
       // Initialize the document with the user ID
@@ -50,7 +51,7 @@ class FilesController {
         name,
         type,
         isPublic,
-        parentId: parentId !== '0' ? new ObjectId(parentId) : '0',
+        parentId: (parentId && parentId !== '0') ? new ObjectId(parentId) : '0',
       };
 
       // Handle folder creation
@@ -114,7 +115,7 @@ class FilesController {
       const { parentId, page = '0' } = req.query;
       const files = await fileUtil.getPaginatedFiles({
         userId: user._id,
-        parentId: !parentId ? new ObjectId(parentId) : '0',
+        parentId: (parentId && parentId !== '0') ? new ObjectId(parentId) : '0',
         page: parseInt(page, 10),
         pageSize: 20,
       });
