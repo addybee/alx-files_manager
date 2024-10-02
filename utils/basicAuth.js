@@ -35,6 +35,14 @@ class BasicAuth {
     return decodedToken.split(':'); // Split into email and password
   }
 
+  static extractToken(req, res) {
+    // Extract the X-Token from the request header
+    const xToken = req.get('X-Token');
+
+    if (!xToken) return res.status(401).json({ error: 'Unauthorized' });
+    return xToken;
+  }
+
   static async userObjectFromCredentials(email, password) {
     if (!email || !password) {
       return null;
@@ -59,25 +67,23 @@ class BasicAuth {
     return token;
   }
 
-  static async currentUser(token) {
-    if (!token) {
-      return null;
-    }
-
+  static async currentUser(req, res) {
+    const token = this.extractToken(req, res);
     const userSession = await redisClient.get(`auth_${token}`);
+
     if (!userSession) {
-      return null;
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
     const authorizationHeader = await redisClient.get(`me_${token}`);
-    const [email, password] = BasicAuth.decodeAndExtractCredential(authorizationHeader);
+    const [email, password] = this.decodeAndExtractCredential(authorizationHeader);
     if (!email || !password) {
-      return null;
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const user = await BasicAuth.userObjectFromCredentials(email, password);
+    const user = await this.userObjectFromCredentials(email, password);
     if (!user) {
-      return null;
+      return res.status(401).json({ error: 'Unauthorized' });
     }
     return user;
   }

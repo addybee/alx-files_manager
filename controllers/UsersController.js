@@ -34,14 +34,7 @@ class UsersController {
 
   static async getMe(req, res) {
     try {
-      // Get the token from the request header
-      const xToken = req.get('X-Token');
-      if (!xToken) return res.status(401).json({ error: 'Unauthorized' });
-
-      // Get the current user based on the token
-      const user = await BasicAuth.currentUser(xToken);
-      if (!user) return res.status(401).json({ error: 'Unauthorized' });
-      console.log(`i am here ${user}, ${xToken}`);
+      const user = await BasicAuth.currentUser(req, res);
       // Extract and return the user id and email
       const { _id, email } = user;
       return res.json({ id: _id, email });

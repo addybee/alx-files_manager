@@ -27,6 +27,19 @@ class FileUtil {
     const { insertedId } = await this.collection.insertOne(file);
     return insertedId;
   }
+
+  async getPaginatedFiles(param) {
+    await this.setCollection();
+    const {
+      pageSize, page, ...rest
+    } = param;
+    const files = this.collection.aggregate([
+      { $match: rest }, // filter documents
+      { $skip: (page * pageSize) }, // Skip documents from previous pages
+      { $limit: pageSize }, // Limit the result to page size
+    ]).toArray();
+    return files;
+  }
 }
 
 const fileUtil = new FileUtil();

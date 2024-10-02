@@ -1,8 +1,8 @@
-import { join } from 'path';
-// import { ObjectId } from 'mongodb';
 import fs from 'fs';
+import { join } from 'path';
 import { promisify } from 'util';
 import { v4 as uuidv4 } from 'uuid';
+import { ObjectId } from 'mongodb';
 import BasicAuth from '../utils/basicAuth';
 import fileUtil from '../utils/files';
 
@@ -11,18 +11,12 @@ const writeFile = promisify(fs.writeFile).bind(fs);
 
 class FilesController {
   static async postUpload(req, res) {
-    // Extract the X-Token from the request header
-    const xToken = req.get('X-Token');
-
-    if (!xToken) return res.status(401).json({ error: 'Unauthorized' });
-
     // Validate the user based on the X-Token
-    const user = await BasicAuth.currentUser(xToken);
-    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+    const user = await BasicAuth.currentUser(req, res);
 
     // Destructure request body to get required fields
     const {
-      name, type, parentId, isPublic = false, data,
+      name, type, parentId='0', isPublic = false, data,
     } = req.body;
 
     // Validate the name field
@@ -38,25 +32,25 @@ class FilesController {
       return res.status(400).json({ error: 'Missing data' });
     }
 
-    // Validate the parentId if provided
-    if (parentId) {
-      const parentFiles = await fileUtil.getFileByFilter({ parentId });
-
-      if (!parentFiles || !parentFiles.length) return res.status(400).json({ error: 'Parent not found' });
-      const file = parentFiles.every((val) => val.type !== 'folder');
-      if (!file) return res.status(400).json({ error: 'Parent is not a folder' });
-    }
-
-    // Initialize the document with the user ID
-    const doc = {
-      userId: user._id,
-      name,
-      type,
-      isPublic,
-      parentId: parentId || '0',
-    };
-
     try {
+      // Validate the parentId if provided
+      if (parentId !== '0') {
+        const parentFiles = await fileUtil.getFileByFilter({ parentId: new ObjectId(parentId) });
+
+        if (!parentFiles || !parentFiles.length) return res.status(400).json({ error: 'Parent not found' });
+        const file = parentFiles.every((val) => val.type !== 'folder');
+        if (!file) return res.status(400).json({ error: 'Parent is not a folder' });
+      }
+
+      // Initialize the document with the user ID
+      const doc = {
+        userId: user._id,
+        name,
+        type,
+        isPublic,
+        parentId,
+      };
+
       // Handle folder creation
       if (type === 'folder') {
         await fileUtil.createFile(doc);
@@ -89,6 +83,40 @@ class FilesController {
       return res.status(201).json({ id: _id, ...rest });
     } catch (err) {
       console.error('Error creating file:', err);
+      return res.status(500).json({ error: 'Error processing file' });
+    }
+  }
+
+  static async getShow(req, res) {
+    try {
+      const user = await BasicAuth.currentUser(req, res);
+      const { id } = req.params;
+      if (!id) {
+        return res.status(404).json({ error: 'Not found' });
+      }
+      const file = await fileUtil.getFileByFilter({ _id: new ObjectId(id), userId: user._id });
+      if (!file && !file.length) {
+        return res.status(404).json({ error: 'Not found' });
+      }
+      return res.json(file[0]);
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: 'Error processing file' });
+    }
+  }
+
+  static async getIndex(req, res) {
+    try {
+      const user = await BasicAuth.currentUser(req, res);
+      const files = await fileUtil.getPaginatedFiles({
+        userId: user._id,
+        parentId: req.query.parentId || '0',
+        page: req.query.page || '0',
+        pageSize: 20,
+      });
+      return res.json(files);
+    } catch (error) {
+      console.error(error);
       return res.status(500).json({ error: 'Error processing file' });
     }
   }
