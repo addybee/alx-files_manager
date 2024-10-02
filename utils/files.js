@@ -40,6 +40,14 @@ class FileUtil {
     ]).toArray();
     return files;
   }
+
+  async updateFiles(filter, update) {
+    await this.setCollection();
+    await this.collection.updateOne(
+      filter,
+      { $set: update },
+    );
+  }
 }
 
 const fileUtil = new FileUtil();
