@@ -30,7 +30,7 @@ class FilesController {
 
     // Validate the type field
     if (!type || !['folder', 'file', 'image'].includes(type)) {
-      return res.status(400).json({ error: 'Invalid type' });
+      return res.status(400).json({ error: 'Missing type' });
     }
 
     // Validate the data field if type is not folder
