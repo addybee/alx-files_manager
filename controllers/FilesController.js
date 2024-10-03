@@ -1,4 +1,6 @@
 import fs from 'fs';
+import Queue from 'bull';
+import { contentType } from 'mime-types';
 import { join } from 'path';
 import { promisify } from 'util';
 import { v4 as uuidv4 } from 'uuid';
@@ -8,6 +10,10 @@ import fileUtil from '../utils/files';
 
 const mkdir = promisify(fs.mkdir).bind(fs);
 const writeFile = promisify(fs.writeFile).bind(fs);
+const readFile = promisify(fs.readFile).bind(fs);
+const access = promisify(fs.access).bind(fs);
+
+const fileQueue = new Queue('fileQueue');
 
 class FilesController {
   static async postUpload(req, res) {
@@ -80,9 +86,16 @@ class FilesController {
       // Update the document with the file's local path
       doc.localPath = filePath;
 
+      const { localPath, _id, ...rest } = doc;
       // Create the file document in the database
       await fileUtil.createFile(doc);
-      const { localPath, _id, ...rest } = doc;
+      if (doc.type === 'image') {
+        await fileQueue.add({
+          userId: user._id.toString(),
+          fileId: _id,
+        });
+      }
+
       return res.status(201).json({ id: _id, ...rest });
     } catch (err) {
       console.error('Error creating file:', err);
@@ -101,7 +114,7 @@ class FilesController {
       if (!file || !file.length) {
         return res.status(404).json({ error: 'Not found' });
       }
-      console.log(file);
+
       return res.json(file[0]);
     } catch (error) {
       console.error(error);
@@ -127,35 +140,99 @@ class FilesController {
   }
 
   static async putPublish(req, res) {
-    const user = await BasicAuth.currentUser(req, res);
-    const { id } = req.params;
-    if (!id) {
-      return res.status(404).json({ error: 'Not found' });
+    try {
+      const user = await BasicAuth.currentUser(req, res);
+      const { id } = req.params;
+      if (!id) {
+        return res.status(404).json({ error: 'Not found' });
+      }
+      const filter = { _id: new ObjectId(id), userId: user._id };
+      let file = await fileUtil.getFileByFilter(filter);
+      if (!file && !file.length) {
+        return res.status(404).json({ error: 'Not found' });
+      }
+      await fileUtil.updateFiles(filter, { isPublic: true });
+      file = await fileUtil.getFileByFilter(filter);
+      return res.json(file[0]);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Error processing file' });
     }
-    const filter = { _id: new ObjectId(id), userId: user._id };
-    let file = await fileUtil.getFileByFilter(filter);
-    if (!file && !file.length) {
-      return res.status(404).json({ error: 'Not found' });
-    }
-    await fileUtil.updateFiles(filter, { isPublic: true });
-    file = await fileUtil.getFileByFilter(filter);
-    return res.json(file[0]);
   }
 
   static async putUnpublish(req, res) {
-    const user = await BasicAuth.currentUser(req, res);
-    const { id } = req.params;
-    if (!id) {
-      return res.status(404).json({ error: 'Not found' });
+    try {
+      const user = await BasicAuth.currentUser(req, res);
+      const { id } = req.params;
+      if (!id) {
+        return res.status(404).json({ error: 'Not found' });
+      }
+      const filter = { _id: new ObjectId(id), userId: user._id };
+      let file = await fileUtil.getFileByFilter(filter);
+      if (!file && !file.length) {
+        return res.status(404).json({ error: 'Not found' });
+      }
+      await fileUtil.updateFiles(filter, { isPublic: true });
+      file = await fileUtil.getFileByFilter(filter);
+      return res.json(file[0]);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Error processing file' });
     }
-    const filter = { _id: new ObjectId(id), userId: user._id };
-    let file = await fileUtil.getFileByFilter(filter);
-    if (!file && !file.length) {
-      return res.status(404).json({ error: 'Not found' });
+  }
+
+  static async getFile(req, res) {
+    try {
+      // const user = await BasicAuth.currentUser(req, res);
+      const { id } = req.params;
+      const { size } = req.query;
+
+      if (!id) {
+        return res.status(404).json({ error: 'Not found' });
+      }
+
+      const file = await fileUtil.getFileByFilter({ _id: new ObjectId(id) });
+
+      // Check if file exists and is not empty
+      if (!file || !file.length) {
+        return res.status(404).json({ error: 'Not found' });
+      }
+      const fileData = file[0];
+
+      // Check if the file is a folder
+      if (fileData.type === 'folder') {
+        return res.status(400).json({ error: 'A folder doesn\'t have content' });
+      }
+      // Check if the localPath exists
+      if (!fileData.localPath) {
+        return res.status(404).json({ error: 'Not found' });
+      }
+
+      let filePath = fileData.localPath;
+      if (size && ['500', '250', '100'].includes(size)) {
+        const thumbnailPath = `${filePath}_${size}`;
+
+        // Check if the thumbnail exists
+        await access(thumbnailPath);
+        filePath = thumbnailPath;
+      }
+      // Read the file content
+      const content = await readFile(filePath, 'utf8');
+
+      // Get the content MIME type
+      const contentMime = contentType(fileData.name);
+
+      // Check if contentMime is valid
+      if (!contentMime) {
+        return res.status(500).json({ error: 'Invalid content type' });
+      }
+      // Set content type and send file content
+      res.set('Content-Type', contentMime);
+      return res.send(content);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Error processing file' });
     }
-    await fileUtil.updateFiles(filter, { isPublic: false });
-    file = await fileUtil.getFileByFilter(filter);
-    return res.json(file[0]);
   }
 }
 
