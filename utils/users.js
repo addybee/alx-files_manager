@@ -17,14 +17,9 @@ class UserUtils {
   }
 
   async getUserByFilter(filterObject) {
-    try {
-      await this.setCollection();
-      const users = await this.collection.find(filterObject).toArray();
-      return users;
-    } catch (error) {
-      console.error(error);
-      return null;
-    }
+    await this.setCollection();
+    const users = await this.collection.find(filterObject).toArray();
+    return users;
   }
 
   async createUser(user) {

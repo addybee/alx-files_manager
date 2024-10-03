@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import sha1 from 'sha1';
+import { ObjectId } from 'mongodb';
 import redisClient from './redis';
 import userUtils from './users';
 
@@ -67,18 +68,22 @@ class BasicAuth {
   }
 
   static async currentUser(req, res) {
-    const token = this.extractToken(req, res);
-    const userId = await redisClient.get(`auth_${token}`);
+    try {
+      const token = this.extractToken(req, res);
+      const userId = await redisClient.get(`auth_${token}`);
 
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
 
-    const [ user ] = await userUtils.getUserByFilter({ _id: ObjectId(userId) });
-    if (!user) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      const [ user ] = await userUtils.getUserByFilter({ _id: new ObjectId(userId) });
+      if (!user) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+      return user;
+    } catch (err) {
+      throw new Error(err);
     }
-    return user;
   }
 }
 
