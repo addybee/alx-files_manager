@@ -20,7 +20,7 @@ class AuthController {
     if (!user) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
-    const token = await BasicAuth.createSession(authorizationHeader);
+    const token = await BasicAuth.createSession(user._id);
     // Generate a unique session token and store it in Redis with a TTL of 3600 seconds
     return res.json({ token }); // Return the generated token
   }

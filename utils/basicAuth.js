@@ -60,28 +60,21 @@ class BasicAuth {
     return user[0];
   }
 
-  static async createSession(authorizationHeader) {
+  static async createSession(userId) {
     const token = uuidv4();
-    await redisClient.set(`auth_${token}`, token, 86400); // Store the token with a TTL of 24hrs
-    await redisClient.set(`me_${token}`, authorizationHeader, 86400);
+    await redisClient.set(`auth_${token}`, userId.toString(), 86400); // Store the userId with a TTL of 24hrs
     return token;
   }
 
   static async currentUser(req, res) {
     const token = this.extractToken(req, res);
-    const userSession = await redisClient.get(`auth_${token}`);
+    const userId = await redisClient.get(`auth_${token}`);
 
-    if (!userSession) {
+    if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const authorizationHeader = await redisClient.get(`me_${token}`);
-    const [email, password] = this.decodeAndExtractCredential(authorizationHeader);
-    if (!email || !password) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const user = await this.userObjectFromCredentials(email, password);
+    const [ user ] = await userUtils.getUserByFilter({ _id: ObjectId(userId) });
     if (!user) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
