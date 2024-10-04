@@ -13,6 +13,7 @@ const mkdir = promisify(fs.mkdir).bind(fs);
 const writeFile = promisify(fs.writeFile).bind(fs);
 const readFile = promisify(fs.readFile).bind(fs);
 const access = promisify(fs.access).bind(fs);
+const existsAsync = promisify(fs.exists).bind(fs);
 
 const fileQueue = new Queue('fileQueue');
 
@@ -214,7 +215,7 @@ class FilesController {
         return res.status(400).json({ error: 'A folder doesn\'t have content' });
       }
       // Check if the localPath exists
-      if (!fileData.localPath) {
+      if (!fileData.localPath || !await existsAsync(fileData.localPath)) {
         return res.status(404).json({ error: 'Not found' });
       }
 
