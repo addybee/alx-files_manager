@@ -76,7 +76,7 @@ class BasicAuth {
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
-      const [ user ] = await userUtils.getUserByFilter({ _id: new ObjectId(userId) });
+      const [user] = await userUtils.getUserByFilter({ _id: new ObjectId(userId) });
       if (!user) {
         return res.status(401).json({ error: 'Unauthorized' });
       }

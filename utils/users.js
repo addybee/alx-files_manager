@@ -1,4 +1,6 @@
+import { ObjectId } from 'mongodb';
 import dbClient from './db';
+import redisClient from './redis';
 
 class UserUtils {
   async setCollection() {
@@ -26,6 +28,26 @@ class UserUtils {
     await this.setCollection();
     const { insertedId } = await this.collection.insertOne(user);
     return insertedId;
+  }
+
+  async currentUser(token) {
+    if (!token) return null;
+    try {
+      const userId = await redisClient.get(`auth_${token}`);
+
+      if (!userId) {
+        return null;
+      }
+
+      const [user] = await this.getUserByFilter({ _id: new ObjectId(userId) });
+      if (!user) {
+        return null;
+      }
+      return user;
+    } catch (err) {
+      console.error(err);
+      throw new Error(err);
+    }
   }
 }
 

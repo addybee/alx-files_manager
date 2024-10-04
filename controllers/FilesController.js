@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { ObjectId } from 'mongodb';
 import BasicAuth from '../utils/basicAuth';
 import fileUtil from '../utils/files';
+import userUtils from '../utils/users';
 
 const mkdir = promisify(fs.mkdir).bind(fs);
 const writeFile = promisify(fs.writeFile).bind(fs);
@@ -152,7 +153,7 @@ class FilesController {
       if (!file) {
         return res.status(404).json({ error: 'Not found' });
       }
-      await fileUtil.updateFiles(filter, { isPublic: false });
+      await fileUtil.updateFiles(filter, { isPublic: true });
       file.isPublic = true;
       return res.json(file);
     } catch (err) {
@@ -169,12 +170,13 @@ class FilesController {
         return res.status(404).json({ error: 'Not found' });
       }
 
+      const filter = { _id: new ObjectId(id), userId: user._id };
       const [file] = await fileUtil.getFileByFilter({ _id: new ObjectId(id), userId: user._id });
       if (!file) {
         return res.status(404).json({ error: 'Not found' });
       }
-      await fileUtil.updateFiles({ isPublic: false });
-
+      await fileUtil.updateFiles(filter, { isPublic: false });
+      file.isPublic = false;
       return res.json(file);
     } catch (err) {
       console.error(err);
@@ -187,19 +189,25 @@ class FilesController {
       // const user = await BasicAuth.currentUser(req, res);
       const { id } = req.params;
       const { size } = req.query;
+      const token = req.get('X-Token');
 
       if (!id) {
         return res.status(404).json({ error: 'Not found' });
       }
 
-      const file = await fileUtil.getFileByFilter({ _id: new ObjectId(id) });
+      const [fileData] = await fileUtil.getFileByFilter({ _id: new ObjectId(id) });
 
       // Check if file exists and is not empty
-      if (!file || !file.length) {
+      if (!fileData) {
         return res.status(404).json({ error: 'Not found' });
       }
-      const fileData = file[0];
 
+      if (fileData.isPublic === false) {
+        const user = await userUtils.currentUser(token);
+        if (!user || user._id.toString() !== fileData.userId.toString()) {
+          return res.status(404).json({ error: 'Not found' });
+        }
+      }
       // Check if the file is a folder
       if (fileData.type === 'folder') {
         return res.status(400).json({ error: 'A folder doesn\'t have content' });
