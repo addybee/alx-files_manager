@@ -55,15 +55,14 @@ class FilesController {
         name,
         type,
         isPublic,
-        parentId: (parentId) ? new ObjectId(parentId) : '0',
+        parentId: (parentId) ? new ObjectId(parentId) : 0,
       };
 
       // Handle folder creation
       if (type === 'folder') {
         await fileUtil.createFile(doc);
         const { localPath, _id, ...rest } = doc;
-        res.status(201).json({ id: _id, ...rest });
-        return;
+        return res.status(201).json({ id: _id, ...rest });
       }
 
       // Handle file or image creation
@@ -160,9 +159,7 @@ class FilesController {
     } catch (err) {
       console.error(err);
       // Check if headers were already sent
-      if (!res.headersSent) {
-        return res.status(500).json({ error: 'Error processing file' });
-      }
+      return res.status(500).json({ error: 'Error processing file' });
     }
   }
 
