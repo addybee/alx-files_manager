@@ -123,16 +123,16 @@ class FilesController {
     try {
       const user = await BasicAuth.currentUser(req, res);
       const { parentId = 0, page = 0 } = req.query;
-      let files = await fileUtil.getPaginatedFiles({
+      const files = await fileUtil.getPaginatedFiles({
         userId: user._id,
         parentId: (parentId) ? new ObjectId(parentId) : '0',
         page: parseInt(page, 10),
         pageSize: 20,
       });
-      files.forEach((item) => {
+      for (const item of files) {
         item.id = item._id;
         delete item._id;
-      });
+      }
       return res.json(files);
     } catch (error) {
       console.error(error);
@@ -148,13 +148,13 @@ class FilesController {
         return res.status(404).json({ error: 'Not found' });
       }
       const filter = { _id: new ObjectId(id), userId: user._id };
-      let file = await fileUtil.getFileByFilter(filter);
-      if (!file && !file.length) {
+      const [file] = await fileUtil.getFileByFilter(filter);
+      if (!file) {
         return res.status(404).json({ error: 'Not found' });
       }
-      await fileUtil.updateFiles(filter, { isPublic: true });
-      file = await fileUtil.getFileByFilter(filter);
-      return res.json(file[0]);
+      await fileUtil.updateFiles(filter, { isPublic: false });
+      file.isPublic = true;
+      return res.json(file);
     } catch (err) {
       console.error(err);
       return res.status(500).json({ error: 'Error processing file' });
@@ -168,14 +168,14 @@ class FilesController {
       if (!id) {
         return res.status(404).json({ error: 'Not found' });
       }
-      const filter = { _id: new ObjectId(id), userId: user._id };
-      let file = await fileUtil.getFileByFilter(filter);
-      if (!file && !file.length) {
+
+      const [file] = await fileUtil.getFileByFilter({ _id: new ObjectId(id), userId: user._id });
+      if (!file) {
         return res.status(404).json({ error: 'Not found' });
       }
-      await fileUtil.updateFiles(filter, { isPublic: true });
-      file = await fileUtil.getFileByFilter(filter);
-      return res.json(file[0]);
+      await fileUtil.updateFiles({ isPublic: false });
+
+      return res.json(file);
     } catch (err) {
       console.error(err);
       return res.status(500).json({ error: 'Error processing file' });
