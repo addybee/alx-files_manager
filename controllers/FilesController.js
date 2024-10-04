@@ -22,7 +22,7 @@ class FilesController {
 
     // Destructure request body to get required fields
     const {
-      name, type, parentId, isPublic = false, data,
+      name, type, parentId = 0, isPublic = false, data,
     } = req.body;
 
     // Validate the name field
@@ -41,10 +41,7 @@ class FilesController {
     try {
       // Validate the parentId if provided
       if (parentId) {
-        const parentFiles = await fileUtil.getFileByFilter({
-          parentId: (parentId && parentId !== '0') ? new ObjectId(parentId) : '0',
-        });
-
+        const parentFiles = await fileUtil.getFileByFilter({ _id: new ObjectId(parentId) });
         if (!parentFiles || !parentFiles.length) return res.status(400).json({ error: 'Parent not found' });
 
         const file = parentFiles.every((val) => val.type !== 'folder');
@@ -57,7 +54,7 @@ class FilesController {
         name,
         type,
         isPublic,
-        parentId: (parentId && parentId !== '0') ? new ObjectId(parentId) : '0',
+        parentId: (parentId) ? new ObjectId(parentId) : 0,
       };
 
       // Handle folder creation
@@ -86,9 +83,9 @@ class FilesController {
       // Update the document with the file's local path
       doc.localPath = filePath;
 
-      const { localPath, _id, ...rest } = doc;
       // Create the file document in the database
       await fileUtil.createFile(doc);
+      const { localPath, _id, ...rest } = doc;
       if (doc.type === 'image') {
         await fileQueue.add({
           userId: user._id.toString(),
@@ -125,10 +122,10 @@ class FilesController {
   static async getIndex(req, res) {
     try {
       const user = await BasicAuth.currentUser(req, res);
-      const { parentId, page = '0' } = req.query;
+      const { parentId = 0, page = 0 } = req.query;
       const files = await fileUtil.getPaginatedFiles({
         userId: user._id,
-        parentId: (parentId && parentId !== '0') ? new ObjectId(parentId) : '0',
+        parentId: (parentId) ? new ObjectId(parentId) : 0,
         page: parseInt(page, 10),
         pageSize: 20,
       });
