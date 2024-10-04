@@ -62,7 +62,8 @@ class FilesController {
       if (type === 'folder') {
         await fileUtil.createFile(doc);
         const { localPath, _id, ...rest } = doc;
-        return res.status(201).json({ id: _id, ...rest });
+        res.status(201).json({ id: _id, ...rest });
+        return;
       }
 
       // Handle file or image creation
@@ -158,7 +159,10 @@ class FilesController {
       return res.json(file);
     } catch (err) {
       console.error(err);
-      return res.status(500).json({ error: 'Error processing file' });
+      // Check if headers were already sent
+      if (!res.headersSent) {
+        return res.status(500).json({ error: 'Error processing file' });
+      }
     }
   }
 
@@ -229,17 +233,13 @@ class FilesController {
       const content = await readFile(filePath, 'utf8');
 
       // Get the content MIME type
-      const contentMime = contentType(fileData.name);
+      const contentMime = contentType('kop.txt');
 
-      // Check if contentMime is valid
-      if (!contentMime) {
-        return res.status(500).json({ error: 'Invalid content type' });
-      }
       // Set content type and send file content
       res.set('Content-Type', contentMime);
       return res.send(content);
     } catch (err) {
-      console.error(err);
+      console.log(err);
       return res.status(500).json({ error: 'Error processing file' });
     }
   }
