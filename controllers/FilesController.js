@@ -54,7 +54,7 @@ class FilesController {
         name,
         type,
         isPublic,
-        parentId: (parentId) ? new ObjectId(parentId) : 0,
+        parentId: (parentId) ? new ObjectId(parentId) : '0',
       };
 
       // Handle folder creation
@@ -123,11 +123,15 @@ class FilesController {
     try {
       const user = await BasicAuth.currentUser(req, res);
       const { parentId = 0, page = 0 } = req.query;
-      const files = await fileUtil.getPaginatedFiles({
+      let files = await fileUtil.getPaginatedFiles({
         userId: user._id,
-        parentId: (parentId) ? new ObjectId(parentId) : 0,
+        parentId: (parentId) ? new ObjectId(parentId) : '0',
         page: parseInt(page, 10),
         pageSize: 20,
+      });
+      files.forEach((item) => {
+        item.id = item._id;
+        delete item._id;
       });
       return res.json(files);
     } catch (error) {
