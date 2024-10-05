@@ -12,7 +12,6 @@ import userUtils from '../utils/users';
 const mkdir = promisify(fs.mkdir).bind(fs);
 const writeFile = promisify(fs.writeFile).bind(fs);
 const readFile = promisify(fs.readFile).bind(fs);
-const access = promisify(fs.access).bind(fs);
 const existsAsync = promisify(fs.exists).bind(fs);
 
 const fileQueue = new Queue('fileQueue');
@@ -91,7 +90,7 @@ class FilesController {
       if (doc.type === 'image') {
         await fileQueue.add({
           userId: user._id.toString(),
-          fileId: _id,
+          fileId: _id.toString(),
         });
       }
 
@@ -220,21 +219,20 @@ class FilesController {
       }
 
       let filePath = fileData.localPath;
-      if (size && ['500', '250', '100'].includes(size)) {
+      if (fileData.type === 'image' && size) {
         const thumbnailPath = `${filePath}_${size}`;
 
         // Check if the thumbnail exists
-        await access(thumbnailPath);
+        if (!await existsAsync(thumbnailPath)) return res.status(404).json({ error: 'Not found' });
         filePath = thumbnailPath;
       }
       // Read the file content
       const content = await readFile(filePath, 'utf8');
 
       // Get the content MIME type
-      const contentMime = contentType('kop.txt');
-
+      const contentMime = contentType(fileData.name);
       // Set content type and send file content
-      res.set('Content-Type', contentMime);
+      res.setHeader('Content-Type', contentMime);
       return res.send(content);
     } catch (err) {
       console.log(err);
